@@ -1,0 +1,22 @@
+PROJECT_ID=[YOUR-PROJECT-ID]
+BUCKET_ID=[YOUR-BUCKET-ID]
+JOB_NAME=finding_phishing_website_$(date +"%Y%m%d_%H%M%S")
+JOB_DIR=gs://$BUCKET_ID/scikit_learn_job_dir
+TRAINING_PACKAGE_PATH="/home/kishore/Desktop/phishing_Dataset/"
+MAIN_TRAINER_MODULE=phishing.train
+REGION=us-central1
+RUNTIME_VERSION=1.10
+PYTHON_VERSION=2.7
+SCALE_TIER=BASIC
+
+
+
+
+gcloud ml-engine jobs submit training $JOB_NAME \
+  --job-dir $JOB_DIR \
+  --package-path $TRAINER_PACKAGE_PATH \
+  --module-name $MAIN_TRAINER_MODULE \
+  --region $REGION \
+  --runtime-version=$RUNTIME_VERSION \
+  --python-version=$PYTHON_VERSION \
+  --scale-tier $SCALE_TIER

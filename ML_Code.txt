@@ -1,0 +1,62 @@
+import datetime
+import pandas as pd
+import csv
+
+from google.cloud import storage
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.externals import joblib
+from sklearn.feature_selection import SelectKBest
+from sklearn.pipeline import FeatureUnion
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import LabelBinarizer
+
+
+BUCKET_NAME = 'BucketForPhishingWebsite'
+bucket = storage.Client().bucket(BUCKET_NAME)
+blob = bucket.blob('/home/kishore/Desktop/PhishingWebsite/train.data')
+blob.download_to_filename('train.data')
+COLUMNS = list(pd.data.frame(read_csv(train.data, header = None)).columns.values)
+
+with open('./train.data', 'r') as train_data:
+    raw_training_data = pd.read_csv(train_data, header=None)
+
+train_features = raw_training_data.drop('risk-level', axis=1).values.tolist()
+train_labels = (raw_training_data['length_IP'] >= 10).values.tolist()
+
+categorical_pipelines = []
+for i, col in enumerate(COLUMNS[:-1]):
+    if col in COLUMNS:
+	scores = [0] * len(COLUMNS[:-1]) 
+        scores[i] = 1  
+        skb = SelectKBest(k=1)
+        skb.scores_ = scores
+        lbn = LabelBinarizer()
+        r = skb.transform(train_features)
+        lbn.fit(r)
+        categorical_pipelines.append(
+            ('categorical-{}'.format(i), Pipeline([
+                ('SKB-{}'.format(i), skb),
+                ('LBN-{}'.format(i), lbn)])))
+
+categorical_pipelines.append(('numerical', skb))
+preprocess = FeatureUnion(categorical_pipelines)
+
+
+classifier = RandomForestClassifier()
+classifier.fit(preprocess.transform(train_features), train_labels)
+pipeline = Pipeline([
+    ('union', preprocess),
+    ('classifier', classifier)
+])
+
+
+model = 'model.joblib'
+joblib.dump(pipeline, model)
+
+
+bucket = storage.Client().bucket(BUCKET_NAME)
+blob = bucket.blob('{}/{}'.format(
+    datetime.datetime.now().strftime('census_%Y%m%d_%H%M%S'),
+    model))
+blob.upload_from_filename(model)
